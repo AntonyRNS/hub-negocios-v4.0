@@ -31,27 +31,31 @@ export default function Home() {
     fetchProviders();
   }, []);
 
-  const fetchProviders = () => {
+  const fetchProviders = async () => {
     setLoading(true);
-    
-    const savedProviders = localStorage.getItem('local_providers');
-    const savedProfessions = localStorage.getItem('local_professions');
-    
-    const rawProviders: Provider[] = savedProviders ? JSON.parse(savedProviders) : [];
-    const professionsList: Profession[] = savedProfessions ? JSON.parse(savedProfessions) : [];
+    try {
+      const response = await fetch('/api/providers');
+      if (response.ok) {
+        const data = await response.json();
+        
+        // Mapeia os dados injetando diretamente o nome da profissão no objeto do prestador
+        // para manter compatibilidade total com os cards e busca no front
+        const mapped = data.map((provider: any) => ({
+          ...provider,
+          profession_name: provider.profession ? provider.profession.name : 'Outra'
+        }));
 
-    // Mapeia os dados injetando diretamente o nome da profissão no objeto do prestador
-    const dataWithProfessions = rawProviders.map(provider => {
-      const matchedProfession = professionsList.find(p => p.id === provider.profession_id);
-      return {
-        ...provider,
-        profession_name: matchedProfession ? matchedProfession.name : 'Outra'
-      };
-    });
-
-    setProviders(dataWithProfessions);
-    setLoading(false);
+        setProviders(mapped);
+      } else {
+        console.error('Erro ao carregar prestadores da API');
+      }
+    } catch (error) {
+      console.error('Erro ao carregar prestadores:', error);
+    } finally {
+      setLoading(false);
+    }
   };
+
 
   const filteredProviders = providers.filter(p => 
     p.full_name.toLowerCase().includes(search.toLowerCase()) ||

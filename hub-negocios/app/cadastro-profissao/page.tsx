@@ -29,16 +29,21 @@ export default function ProfissoesPage() {
     fetchProfessions();
   }, []);
 
-  const fetchProfessions = () => {
+  const fetchProfessions = async () => {
     setFetching(true);
-    const savedProfessions = localStorage.getItem('local_professions');
-    if (savedProfessions) {
-      setProfessions(JSON.parse(savedProfessions));
-    } else {
-      localStorage.setItem('local_professions', JSON.stringify(DEFAULT_PROFESSIONS));
-      setProfessions(DEFAULT_PROFESSIONS);
+    try {
+      const response = await fetch('/api/professions');
+      if (response.ok) {
+        const data = await response.json();
+        setProfessions(data);
+      } else {
+        console.error('Erro ao buscar profissões da API');
+      }
+    } catch (error) {
+      console.error('Erro na requisição de profissões:', error);
+    } finally {
+      setFetching(false);
     }
-    setFetching(false);
   };
 
   const handleAdd = async (e: React.FormEvent) => {
@@ -46,34 +51,69 @@ export default function ProfissoesPage() {
     if (!newName.trim()) return;
     
     setLoading(true);
-    // Pequena latência simulada para feedback visual do botão
-    await new Promise((resolve) => setTimeout(resolve, 300));
 
-    const newProfession: Profession = {
-      id: `prof-${Date.now()}`,
-      name: newName.trim(),
-      description: newDesc.trim() || undefined
-    };
+    try {
+      const response = await fetch('/api/professions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: newName.trim(),
+          description: newDesc.trim() || undefined,
+        }),
+      });
 
-    const updatedProfessions = [...professions, newProfession].sort((a, b) => 
-      a.name.localeCompare(b.name)
-    );
+      if (response.ok) {
+        const newProf = await response.json();
+        
+        // Verifica se a profissão já existia na lista atual pelo ID
+        const alreadyExists = professions.some(p => p.id === newProf.id);
+        
+        let updated: Profession[];
+        if (alreadyExists) {
+          updated = [...professions];
+        } else {
+          updated = [...professions, newProf];
+        }
 
-    localStorage.setItem('local_professions', JSON.stringify(updatedProfessions));
-    setProfessions(updatedProfessions);
-    
-    setNewName('');
-    setNewDesc('');
-    setLoading(false);
+        // Ordena alfabeticamente
+        updated.sort((a, b) => a.name.localeCompare(b.name));
+        setProfessions(updated);
+        setNewName('');
+        setNewDesc('');
+      } else {
+        const errData = await response.json();
+        alert(errData.error || 'Erro ao adicionar profissão.');
+      }
+    } catch (error) {
+      console.error('Erro ao adicionar profissão:', error);
+      alert('Erro de conexão ao adicionar profissão.');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (!confirm('Deseja excluir esta profissão? Isso pode afetar prestadores cadastrados.')) return;
     
-    const updatedProfessions = professions.filter(p => p.id !== id);
-    localStorage.setItem('local_professions', JSON.stringify(updatedProfessions));
-    setProfessions(updatedProfessions);
+    try {
+      const response = await fetch(`/api/professions/${id}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        setProfessions(prev => prev.filter(p => p.id !== id));
+      } else {
+        const errData = await response.json();
+        alert(errData.error || 'Erro ao excluir profissão.');
+      }
+    } catch (error) {
+      console.error('Erro ao excluir profissão:', error);
+      alert('Erro de conexão ao excluir profissão.');
+    }
   };
+
 
   return (
     <div className="container py-5" style={{ maxWidth: '960px' }}>

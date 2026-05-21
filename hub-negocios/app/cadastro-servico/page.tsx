@@ -41,24 +41,28 @@ export default function CadastrarPage() {
     fetchProfessions();
   }, []);
 
-  const fetchProfessions = () => {
-    const savedProfessions = localStorage.getItem('local_professions');
-    if (savedProfessions) {
-      setProfessions(JSON.parse(savedProfessions));
-    } else {
-      localStorage.setItem('local_professions', JSON.stringify(DEFAULT_PROFESSIONS));
-      setProfessions(DEFAULT_PROFESSIONS);
+  const fetchProfessions = async () => {
+    try {
+      const response = await fetch('/api/professions');
+      if (response.ok) {
+        const data = await response.json();
+        setProfessions(data);
+      } else {
+        console.error('Erro ao carregar profissões da API');
+      }
+    } catch (error) {
+      console.error('Erro ao carregar profissões:', error);
     }
   };
 
   const handleQuickFill = () => {
     setIsNewProfession(false);
     setFormData({
-      full_name: 'João da Silva (TESTE LOCAL)',
+      full_name: 'João da Silva (TESTE BANCO)',
       email: 'joao.teste@email.com',
       profession_id: professions[0]?.id || '',
       location: 'São Paulo, SP',
-      description: 'Prestador de serviços com vasta experiência em manutenção residencial e pequenos reparos salvos localmente.',
+      description: 'Prestador de serviços com vasta experiência em manutenção residencial e pequenos reparos salvos no Supabase.',
       experience: '10 anos',
       age: '35',
       service_hours: 'Seg-Sex: 08:00 - 18:00',
@@ -70,48 +74,41 @@ export default function CadastrarPage() {
     e.preventDefault();
     setLoading(true);
 
-    await new Promise((resolve) => setTimeout(resolve, 500));
-
-    let professionId = formData.profession_id;
-
-    if (isNewProfession && customProfession) {
-      const newProfession: Profession = {
-        id: `prof-${Date.now()}`,
-        name: customProfession.trim()
-      };
-
-      const updatedProfessions = [...professions, newProfession].sort((a, b) => 
-        a.name.localeCompare(b.name)
-      );
-
-      localStorage.setItem('local_professions', JSON.stringify(updatedProfessions));
-      setProfessions(updatedProfessions);
-      professionId = newProfession.id;
-    }
-
-    if (!professionId) {
+    if (!isNewProfession && !formData.profession_id) {
       alert('Por favor, selecione ou informe uma profissão.');
       setLoading(false);
       return;
     }
 
+    if (isNewProfession && !customProfession.trim()) {
+      alert('Por favor, digite o nome da profissão customizada.');
+      setLoading(false);
+      return;
+    }
+
     try {
-      const savedProviders = localStorage.getItem('local_providers');
-      const currentProviders = savedProviders ? JSON.parse(savedProviders) : [];
+      const response = await fetch('/api/providers', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...formData,
+          isNewProfession,
+          customProfession: isNewProfession ? customProfession.trim() : undefined,
+        }),
+      });
 
-      const newProvider = {
-        id: `prov-${Date.now()}`,
-        ...formData,
-        profession_id: professionId,
-        age: formData.age ? parseInt(formData.age) : null
-      };
-
-      localStorage.setItem('local_providers', JSON.stringify([...currentProviders, newProvider]));
-      
-      setSuccess(true);
-      setTimeout(() => router.push('/'), 2000);
+      if (response.ok) {
+        setSuccess(true);
+        setTimeout(() => router.push('/filtro'), 2000);
+      } else {
+        const errData = await response.json();
+        alert(errData.error || 'Erro ao salvar prestador.');
+      }
     } catch (err) {
-      alert('Erro ao salvar os dados localmente.');
+      console.error('Erro ao salvar prestador:', err);
+      alert('Erro de conexão ao salvar os dados.');
     } finally {
       setLoading(false);
     }
