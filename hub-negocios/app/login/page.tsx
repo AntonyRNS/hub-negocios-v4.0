@@ -1,9 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation'; // Padrão App Router que o projeto já usa [3]
+import { useRouter } from 'next/navigation'; // Mantendo o roteador do App Router [1, 2]
+import Link from 'next/link'; // Componente padrão para navegação [3]
 
-// Usuários padrão que serão salvos no navegador
 const DEFAULT_USERS = [
   { id: '1', email: 'Gabriel@gmail.com', password: '123456789', name: 'Gabriel' },
   { id: '2', email: 'Antony@gmail.com', password: '123456789', name: 'Antony' },
@@ -16,7 +16,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
 
-  // Salva os usuários no LocalStorage se eles ainda não existirem [1]
+  // Mantém a inicialização (seed) no LocalStorage [3, 4]
   useEffect(() => {
     const savedUsers = localStorage.getItem('local_users');
     if (!savedUsers) {
@@ -25,35 +25,33 @@ export default function LoginPage() {
   }, []);
 
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault(); // Para o recarregamento automático da página
+    e.preventDefault();
     setError('');
 
-    // RECUPERA OS USUÁRIOS (ESSA PARTE FALTA NO SEU CÓDIGO ATUAL)
+    // Mantém a busca direta no LocalStorage conforme o padrão do projeto [4, 5]
     const savedUsers = localStorage.getItem('local_users');
     const users = savedUsers ? JSON.parse(savedUsers) : [];
 
-    // PROCURA O USUÁRIO (ESSA PARTE TAMBÉM FALTA)
     const user = users.find((u: any) => u.email === email && u.password === password);
 
     if (user) {
-      // SALVA A SESSÃO E MUDA DE PÁGINA
       localStorage.setItem('is_logged_in', 'true');
       localStorage.setItem('current_user', JSON.stringify(user));
       
       console.log('Login realizado com sucesso!');
-      router.push('/'); // ISSO FAZ VOCÊ SAIR DA TELA DE LOGIN
+      router.push('/'); // Redireciona para a home [1]
     } else {
       setError('E-mail ou senha incorretos.');
     }
   };
 
   return (
-    <div style={{ padding: '20px' }}>
+    <div style={{ padding: '20px', maxWidth: '400px', margin: 'auto' }}>
       <h1>Login</h1>
       <form onSubmit={handleSubmit}>
         {error && <p style={{ color: 'red' }}>{error}</p>}
         
-        <div style={{ marginBottom: '10px' }}>
+        <div>
           <label>E-mail:</label><br />
           <input
             type="email"
@@ -63,7 +61,7 @@ export default function LoginPage() {
           />
         </div>
 
-        <div style={{ marginBottom: '10px' }}>
+        <div style={{ marginTop: '10px' }}>
           <label>Senha:</label><br />
           <input
             type="password"
@@ -73,7 +71,17 @@ export default function LoginPage() {
           />
         </div>
 
-        <button type="submit">Entrar</button>
+        <div style={{ marginTop: '20px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          <button type="submit">Entrar</button>
+          
+          {/* Link para a página externa de recuperação conforme solicitado */}
+          <Link 
+            href="/recuperar-senha" 
+            style={{ fontSize: '14px', color: 'blue', textDecoration: 'underline' }}
+          >
+            Esqueci minha senha
+          </Link>
+        </div>
       </form>
     </div>
   );
