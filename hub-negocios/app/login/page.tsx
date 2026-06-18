@@ -1,88 +1,110 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation'; // Mantendo o roteador do App Router [1, 2]
-import Link from 'next/link'; // Componente padrão para navegação [3]
-
-const DEFAULT_USERS = [
-  { id: '1', email: 'Gabriel@gmail.com', password: '123456789', name: 'Gabriel' },
-  { id: '2', email: 'Antony@gmail.com', password: '123456789', name: 'Antony' },
-  { id: '3', email: 'padrao@gmail.com', password: '123456789', name: 'Usuário Padrão' }
-];
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { supabase } from '../../lib/supabase'; 
 
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  // Mantém a inicialização (seed) no LocalStorage [3, 4]
-  useEffect(() => {
-    const savedUsers = localStorage.getItem('local_users');
-    if (!savedUsers) {
-      localStorage.setItem('local_users', JSON.stringify(DEFAULT_USERS));
-    }
-  }, []);
-
-  const handleSubmit = (e: React.FormEvent) => {
+  // Login Normal (Supabase/Prisma via API)
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setLoading(true);
 
-    // Mantém a busca direta no LocalStorage conforme o padrão do projeto [4, 5]
-    const savedUsers = localStorage.getItem('local_users');
-    const users = savedUsers ? JSON.parse(savedUsers) : [];
+    try {
+      const response = await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
 
-    const user = users.find((u: any) => u.email === email && u.password === password);
+      const data = await response.json();
 
-    if (user) {
-      localStorage.setItem('is_logged_in', 'true');
-      localStorage.setItem('current_user', JSON.stringify(user));
-      
-      console.log('Login realizado com sucesso!');
-      router.push('/'); // Redireciona para a home [1]
-    } else {
-      setError('E-mail ou senha incorretos.');
+      if (response.ok) {
+        localStorage.setItem('is_logged_in', 'true');
+        localStorage.setItem('current_user', JSON.stringify(data.user));
+        router.push('/'); 
+      } else {
+        setError(data.error || 'Credenciais inválidas.');
+      }
+    } catch (err) {
+      setError('Erro ao conectar com o servidor.');
+    } finally {
+      setLoading(false);
     }
   };
 
+  // NOVO: Função de Login com Google
+  const handleGoogleLogin = async () => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+      },
+    });
+    if (error) setError(error.message);
+  };
+
   return (
-    <div style={{ padding: '20px', maxWidth: '400px', margin: 'auto' }}>
-      <h1>Login</h1>
-      <form onSubmit={handleSubmit}>
-        {error && <p style={{ color: 'red' }}>{error}</p>}
-        
-        <div>
-          <label>E-mail:</label><br />
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-          />
-        </div>
+    <div className="container-fluid vh-100 d-flex align-items-center bg-light">
+      <div className="container">
+        <div className="row justify-content-center">
+          <div className="col-12 col-md-6 col-lg-4">
+            <div className="card shadow-lg border-0 rounded-4">
+              <div className="card-body p-5">
+                <div className="text-center mb-4">
+                  <h2 className="fw-bold">Acesse sua conta</h2>
+                </div>
 
-        <div style={{ marginTop: '10px' }}>
-          <label>Senha:</label><br />
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-          />
-        </div>
+                <form onSubmit={handleSubmit}>
+                  {error && <div className="alert alert-danger py-2 small">{error}</div>}
+                  <div className="mb-3">
+                    <label className="form-label small fw-bold">E-mail</label>
+                    <input type="email" className="form-control" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                  </div>
+                  <div className="mb-3">
+                    <div className="d-flex justify-content-between">
+                      <label className="form-label small fw-bold">Senha</label>
+                      <Link href="/recuperar-senha" style={{ fontSize: '0.8rem' }} className="text-decoration-none text-primary">Esqueceu a senha?</Link>
+                    </div>
+                    <input type="password" className="form-control" value={password} onChange={(e) => setPassword(e.target.value)} required />
+                  </div>
+                  <button type="submit" disabled={loading} className="btn btn-primary w-100 rounded-3 shadow-sm fw-bold">
+                    {loading ? <span className="spinner-border spinner-border-sm"></span> : 'Entrar'}
+                  </button>
+                </form>
 
-        <div style={{ marginTop: '20px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-          <button type="submit">Entrar</button>
-          
-          {/* Link para a página externa de recuperação conforme solicitado */}
-          <Link 
-            href="/recuperar-senha" 
-            style={{ fontSize: '14px', color: 'blue', textDecoration: 'underline' }}
-          >
-            Esqueci minha senha
-          </Link>
+                <div className="my-4 d-flex align-items-center">
+                  <hr className="flex-grow-1" />
+                  <span className="mx-2 text-muted small">OU</span>
+                  <hr className="flex-grow-1" />
+                </div>
+
+                {/* BOTÃO DO GOOGLE EM BOOTSTRAP */}
+                <button 
+                  onClick={handleGoogleLogin}
+                  className="btn btn-outline-dark w-100 rounded-3 fw-bold d-flex align-items-center justify-content-center gap-2"
+                >
+                  <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="20" alt="Google" />
+                  Entrar com Google
+                </button>
+
+                <div className="text-center mt-4">
+                  <span className="text-muted small">Não tem conta? </span>
+                  <Link href="/cadastro" className="text-decoration-none text-primary fw-bold small">Cadastre-se</Link>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
-      </form>
+      </div>
     </div>
   );
 }
