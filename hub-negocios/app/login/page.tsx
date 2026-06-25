@@ -80,7 +80,7 @@ export default function LoginPage() {
                   <div className="mb-3">
                     <div className="d-flex justify-content-between">
                       <label className="form-label small fw-bold">Senha</label>
-                      <Link href="/recuperar-senha" style={{ fontSize: '0.8rem' }} className="text-decoration-none text-primary">Esqueceu a senha?</Link>
+                      <Link href="/esqueci-senha" style={{ fontSize: '0.8rem' }} className="text-decoration-none text-primary">Esqueceu a senha?</Link>
                     </div>
                     <input type="password" className="form-control" value={password} onChange={(e) => setPassword(e.target.value)} required />
                   </div>

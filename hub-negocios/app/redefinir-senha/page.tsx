@@ -3,10 +3,10 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { supabase } from '../../lib/supabase'; // Ajuste o caminho até a sua pasta lib se necessário
 
 export default function RedefinirSenhaPage() {
   const router = useRouter();
-  const [email, setEmail] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
@@ -26,27 +26,23 @@ export default function RedefinirSenhaPage() {
     setLoading(true);
 
     try {
-      const response = await fetch('/api/redefinir-senha', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, newPassword }),
+      // Método profissional do Supabase para atualizar a senha do usuário atual (autenticado via link do e-mail)
+      const { error: updateError } = await supabase.auth.updateUser({
+        password: newPassword,
       });
 
-      const data = await response.json();
-
-      if (response.ok) {
+      if (updateError) {
+        setError(updateError.message);
+      } else {
         setMessage('Senha alterada com sucesso! Redirecionando...');
         
-        // MANTENDO O CÓDIGO ANTIGO DE MUDANÇA DE PÁGINA
+        // Aguarda 2 segundos para o usuário ler a mensagem e joga para o login
         setTimeout(() => {
-          console.log('Navegando para o login...');
           router.push('/login'); 
         }, 2000);
-      } else {
-        setError(data.error || 'Erro ao atualizar senha.');
       }
     } catch (err) {
-      setError('Falha na conexão com o banco de dados.');
+      setError('Falha na conexão com o servidor do banco de dados.');
     } finally {
       setLoading(false);
     }
@@ -69,17 +65,6 @@ export default function RedefinirSenhaPage() {
                   {message && <div className="alert alert-success py-2 small">{message}</div>}
 
                   <div className="mb-3">
-                    <label className="form-label small fw-bold">E-mail Cadastrado</label>
-                    <input
-                      type="email"
-                      className="form-control"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      required
-                    />
-                  </div>
-
-                  <div className="mb-3">
                     <label className="form-label small fw-bold">Nova Senha</label>
                     <input
                       type="password"
@@ -87,17 +72,21 @@ export default function RedefinirSenhaPage() {
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
                       required
+                      minLength={6}
+                      placeholder="Mínimo 6 caracteres"
                     />
                   </div>
 
                   <div className="mb-4">
-                    <label className="form-label small fw-bold">Confirmar Senha</label>
+                    <label className="form-label small fw-bold">Confirmar Nova Senha</label>
                     <input
                       type="password"
                       className="form-control"
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       required
+                      minLength={6}
+                      placeholder="Repita a nova senha"
                     />
                   </div>
 
