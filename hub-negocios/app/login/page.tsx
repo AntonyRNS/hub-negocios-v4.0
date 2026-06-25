@@ -14,32 +14,29 @@ export default function LoginPage() {
 
   // Login Normal (Supabase/Prisma via API)
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
+  e.preventDefault();
+  setError('');
+  setLoading(true);
 
-    try {
-      const response = await fetch('/api/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      });
+  try {
+    // Conecta direto com o Supabase sem precisar de API intermediária
+    const { data, error: signInError } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
 
-      const data = await response.json();
-
-      if (response.ok) {
-        localStorage.setItem('is_logged_in', 'true');
-        localStorage.setItem('current_user', JSON.stringify(data.user));
-        router.push('/'); 
-      } else {
-        setError(data.error || 'Credenciais inválidas.');
-      }
-    } catch (err) {
-      setError('Erro ao conectar com o servidor.');
-    } finally {
-      setLoading(false);
+    if (signInError) {
+      setError(signInError.message);
+    } else if (data?.session) {
+      // Login feito com sucesso! O cookie já foi salvo pelo SDK.
+      router.push('/'); 
     }
-  };
+  } catch (err) {
+    setError('Erro ao conectar com o servidor.');
+  } finally {
+    setLoading(false);
+  }
+};
 
   // NOVO: Função de Login com Google
   const handleGoogleLogin = async () => {

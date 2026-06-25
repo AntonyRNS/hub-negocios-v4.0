@@ -1,104 +1,128 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation'; // Padrão App Router [2]
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
-export default function RecuperarSenhaPage() {
+export default function RedefinirSenhaPage() {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const [message, setMessage] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleUpdatePassword = (e: React.FormEvent) => {
+  const handleUpdatePassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setMessage('');
 
-    // Validação básica de campos
     if (newPassword !== confirmPassword) {
       setError('As senhas não coincidem.');
       return;
     }
 
-    // 1. Busca os usuários no LocalStorage [3]
-    const savedUsers = localStorage.getItem('local_users');
-    const users = savedUsers ? JSON.parse(savedUsers) : [];
+    setLoading(true);
 
-    // 2. Localiza o índice do usuário pelo e-mail
-    const userIndex = users.findIndex((u: any) => u.email === email);
+    try {
+      const response = await fetch('/api/redefinir-senha', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, newPassword }),
+      });
 
-    if (userIndex !== -1) {
-      // 3. Atualiza a senha no array
-      users[userIndex].password = newPassword;
+      const data = await response.json();
 
-      // 4. Salva o array atualizado de volta no LocalStorage [3, 4]
-      localStorage.setItem('local_users', JSON.stringify(users));
-
-      setMessage('Senha alterada com sucesso! Redirecionando para o login...');
-      
-      // 5. Redireciona após 2 segundos para o usuário ler a mensagem
-      setTimeout(() => {
-        router.push('/login');
-      }, 2000);
-    } else {
-      setError('E-mail não encontrado no sistema.');
+      if (response.ok) {
+        setMessage('Senha alterada com sucesso! Redirecionando...');
+        
+        // MANTENDO O CÓDIGO ANTIGO DE MUDANÇA DE PÁGINA
+        setTimeout(() => {
+          console.log('Navegando para o login...');
+          router.push('/login'); 
+        }, 2000);
+      } else {
+        setError(data.error || 'Erro ao atualizar senha.');
+      }
+    } catch (err) {
+      setError('Falha na conexão com o banco de dados.');
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div style={{ padding: '20px', maxWidth: '400px', margin: 'auto' }}>
-      <h1>Redefinir Senha</h1>
-      <p>Informe seu e-mail e a nova senha desejada.</p>
+    <div className="container-fluid vh-100 d-flex align-items-center bg-light">
+      <div className="container">
+        <div className="row justify-content-center">
+          <div className="col-12 col-md-6 col-lg-4">
+            <div className="card shadow border-0 rounded-4">
+              <div className="card-body p-5">
+                <div className="text-center mb-4">
+                  <h2 className="fw-bold">Nova Senha</h2>
+                  <p className="text-muted small">Atualize seus dados de acesso</p>
+                </div>
 
-      <form onSubmit={handleUpdatePassword} style={{ marginTop: '20px' }}>
-        {error && <p style={{ color: 'red' }}>{error}</p>}
-        {message && <p style={{ color: 'green' }}>{message}</p>}
+                <form onSubmit={handleUpdatePassword}>
+                  {error && <div className="alert alert-danger py-2 small">{error}</div>}
+                  {message && <div className="alert alert-success py-2 small">{message}</div>}
 
-        <div style={{ marginBottom: '15px' }}>
-          <label>E-mail:</label><br />
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            style={{ width: '100%', padding: '8px' }}
-          />
+                  <div className="mb-3">
+                    <label className="form-label small fw-bold">E-mail Cadastrado</label>
+                    <input
+                      type="email"
+                      className="form-control"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
+                    />
+                  </div>
+
+                  <div className="mb-3">
+                    <label className="form-label small fw-bold">Nova Senha</label>
+                    <input
+                      type="password"
+                      className="form-control"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      required
+                    />
+                  </div>
+
+                  <div className="mb-4">
+                    <label className="form-label small fw-bold">Confirmar Senha</label>
+                    <input
+                      type="password"
+                      className="form-control"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      required
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="btn btn-primary w-100 rounded-3 fw-bold shadow-sm"
+                  >
+                    {loading ? (
+                      <span className="spinner-border spinner-border-sm"></span>
+                    ) : (
+                      'Atualizar Senha'
+                    )}
+                  </button>
+                </form>
+
+                <div className="text-center mt-4">
+                  <Link href="/login" className="text-decoration-none text-primary small fw-bold">
+                    Voltar para o Login
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
-
-        <div style={{ marginBottom: '15px' }}>
-          <label>Nova Senha:</label><br />
-          <input
-            type="password"
-            value={newPassword}
-            onChange={(e) => setNewPassword(e.target.value)}
-            required
-            style={{ width: '100%', padding: '8px' }}
-          />
-        </div>
-
-        <div style={{ marginBottom: '15px' }}>
-          <label>Confirmar Nova Senha:</label><br />
-          <input
-            type="password"
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-            required
-            style={{ width: '100%', padding: '8px' }}
-          />
-        </div>
-
-        <button type="submit" style={{ width: '100%', padding: '10px', cursor: 'pointer' }}>
-          Atualizar Senha
-        </button>
-      </form>
-
-      <div style={{ marginTop: '20px', textAlign: 'center' }}>
-        <Link href="/login" style={{ color: 'blue', textDecoration: 'underline' }}>
-          Voltar para o Login
-        </Link>
       </div>
     </div>
   );
