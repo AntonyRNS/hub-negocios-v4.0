@@ -46,7 +46,7 @@ export default function Navbar() {
       <div className="hidden md:flex flex-1 max-w-md mx-4">
         <div className="relative w-full">
           <span className="material-symbols-outlined absolute left-3 top-1/2 transform -translate-y-1/2 text-[#3f4852]"></span>
-          <input className="w-full pl-10 pr-4 py-2 bg-[#eff4ff] border border-[#E2E8F0] rounded-lg focus:outline-none focus:border-[#00629e] text-sm" placeholder="Pesquisar vagas, empresas..." type="text"/>
+          <input className="w-full pl-10 pr-4 py-2 bg-[#eff4ff] border border-[#E2E8F0] rounded-lg focus:outline-none focus:border-[#00629e] text-sm" placeholder="Pesquisar pessoas" type="text"/>
         </div>
       </div>
 
@@ -60,7 +60,7 @@ export default function Navbar() {
         
         <div className="flex items-center gap-2">
           <button className="p-2 text-[#3f4852] hover:bg-[#eff4ff] transition-all rounded-full">
-            <span className="material-symbols-outlined">notifications</span>
+            <span className="material-symbols-outlined">notificações</span>
           </button>
           
           {/* LOGIC INTERESSANTE: Só mostra o indicador de perfil se NÃO estiver na página de perfil */}
