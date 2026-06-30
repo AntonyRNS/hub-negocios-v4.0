@@ -53,23 +53,33 @@ export default function ProfilePage() {
 
   // Função isolada para buscar os posts (usamos para atualizar a tela após postar)
   const fetchPosts = async () => {
-    // Aqui fazemos a query relacional: traz o post E os dados do perfil de quem criou!
-    const { data, error } = await supabase
-      .from('posts')
-      .select(`
-        id,
-        content,
-        image_url,
-        created_at,
-        profiles (
-          username,
-          location
-        )
-      `)
-      .order('created_at', { ascending: false }); // Mostra os mais recentes primeiro
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
 
-    if (data) {
-      setPosts(data);
+      // Adicionamos o .eq('user_id', session.user.id) para filtrar apenas as SUAS postagens
+      const { data, error } = await supabase
+        .from('posts')
+        .select(`
+          id,
+          content,
+          file,
+          created_at,
+          profiles (
+            username,
+            location
+          )
+        `)
+        .eq('user_id', session.user.id) // <--- O SEGREDO ESTÁ AQUI!
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      if (data) {
+        setPosts(data);
+      }
+    } catch (error: any) {
+      console.error("Erro ao carregar posts do perfil:", error.message);
     }
   };
 
@@ -186,7 +196,7 @@ export default function ProfilePage() {
               {profile?.username ? `@${profile.username}` : 'Usuário sem username'}
             </h1>
             <p className="text-sm text-on-surface-variant mt-1 flex items-center justify-center gap-1">
-              <span className="material-symbols-outlined text-sm">location_on</span>
+              <span className="material-symbols-outlined text-sm">Localizado em </span>
               {profile?.location || 'Nenhuma localização cadastrada'}
             </p>
             <button onClick={() => setIsModalOpen(true)} className="mt-4 w-full py-2 bg-primary text-surface-white hover:bg-opacity-90 transition-all rounded-lg text-sm font-semibold cursor-pointer border-none">
@@ -291,9 +301,9 @@ export default function ProfilePage() {
                   <p className="text-sm text-on-surface whitespace-pre-line">{post.content}</p>
 
                   {/* Imagem do Post (se houver) */}
-                  {post.image_url && (
+                  {post.file && (
                     <div className="rounded-lg overflow-hidden border border-border-subtle max-h-96 bg-surface-container-low">
-                      <img src={post.image_url} alt="Imagem do Post" className="w-full h-full object-cover" />
+                      <img src={post.file} alt="Imagem do Post" className="w-full h-full object-cover" />
                     </div>
                   )}
                 </article>
