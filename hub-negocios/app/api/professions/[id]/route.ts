@@ -2,15 +2,16 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma from '../../../../lib/prisma';
 
 interface RouteParams {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
 // DELETE /api/professions/[id] - Exclui uma profissão pelo ID
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
-    const id = params.id;
+    // 2. Precisamos dar 'await' no params para extrair o id
+    const { id } = await params;
 
     if (!id) {
       return NextResponse.json({ error: 'ID da profissão não fornecido.' }, { status: 400 });
